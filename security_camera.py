@@ -37,11 +37,11 @@ class SecurityCamera:
         smtplib_server.starttls()
         smtplib_server.ehlo()
 
-        print(smtplib_server.sendmail(
+        smtplib_server.sendmail(
             self.config["email_from"],
             self.config["email_to"],
             msg.as_string()
-        ))
+        )
         smtplib_server.quit()
         print("Sending Complete!")
 
