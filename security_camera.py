@@ -5,11 +5,16 @@ import datetime
 import smtplib
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
+from time import sleep
 
 class SecurityCamera:
 
     def __init__(self):
-        with open("./config.json", "r") as f:
+        CONFIG_PATH = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "config.json"
+        )
+        with open(CONFIG_PATH, "r") as f:
             self.config = json.loads(f.read())
 
         if not os.path.isdir(self.config["data_save_dir"]):
@@ -50,6 +55,8 @@ class SecurityCamera:
         file_path = os.path.join(self.config["data_save_dir"], file_name)
 
         c = picamera.PiCamera()
+        c.rotation = 180
+        sleep(2)
         print "Taking Picture..."
         c.capture(file_path)
         return file_path

@@ -136,21 +136,3 @@ def add_file(local_path, remote_folder="root"):
     print("Upload Complete!")
 
 
-# def remove_file(local_path, remote_path):
-#     # This add file from local path to remote
-#     credentials = get_credentials()
-#     http = credentials.authorize(httplib2.Http())
-#     drive_service = discovery.build("drive", "v3", http=http)
-#
-#     media = MediaFileUpload(local_path, 'image/jpg', resumable=True)
-#
-#     request = drive_service.files().delete(fileId="")
-#     response = None
-#
-#     while response == None:
-#         status, response = request.next_chunk()
-#         if status:
-#             print("Uploaded %d%%." % int(status.progress() * 100))
-#     print("Upload Complete!")
-
-
