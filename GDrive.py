@@ -24,6 +24,7 @@ except ImportError:
     flags = None
 
 def get_credentials():
+    # Todo: print error warning no required secret files or something like that
     home_dir = os.path.expanduser("~")
     credential_dir = os.path.join(home_dir, ".credentials")
 
@@ -45,19 +46,44 @@ def get_credentials():
     return credentials
 
 
-def find_file(file_name):
+def find_file(file_name, parents=None):
+    # Todo: No Parent found error handling
+    # Todo: No file found error handling
+    # Todo: Handle more than one parent of the same name (maybe two folder same name)
+    # Create Google Drive Thing
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
     drive_servce = discovery.build("drive", "v3", http=http)
 
-    results = drive_servce.files().list(
-        pageSize=10,fields="nextPageToken, files(id, name)", q="name='{}'".format(file_name)).execute()
-    items = results.get('files', [])
+    query_str = ""
+    # Build query string
+    try:
+        if parents is not None:
+            # Find parent's id
+            if parents == 'root':
+                parent_id = 'root'
+            else:
+                parent_id = find_file(parents)[0]["id"]
+            query_str += "'{}' in parents and name='{}'".format(parent_id, file_name)
+        else:
+            query_str += "name='{}'".format(file_name)
+    except TypeError:
+        print("No parent \"{}\" found".format(parents))
+        return 0
+
+
+    result = drive_servce.files().list(
+        pageSize=10,
+        fields="nextPageToken, files(id, name)",
+        q="{}".format(query_str)
+    ).execute()
+
+    items = result.get('files', [])
     if not items:
-        print('No files found.')
+        print('No folder/files of name {} found.'.format(file_name))
         return None
     else:
-        return items[0]
+        return items
 
 def add_folder(folder_name):
     credentials = get_credentials()
@@ -85,11 +111,11 @@ def add_file(local_path, remote_folder="root"):
     # Add metadata about parent folder to upload file to
     if remote_folder != "root":
         try:
-            folder_id = find_file(remote_folder)["id"]
-
+            folder_id = find_file(remote_folder)[0]["id"]
         except TypeError:
-            print("Could not find parent folder, creating a folder")
+            print("Could not find parent folder {}, creating a folder".format(remote_folder))
             folder_id = add_folder(remote_folder)
+
         file_meta = {
             'name': os.path.basename(local_path),
             'parents': [folder_id]
@@ -99,10 +125,11 @@ def add_file(local_path, remote_folder="root"):
             'name': os.path.basename(local_path)
         }
 
+    print(file_meta)
     request = drive_service.files().create(media_body=media, body=file_meta)
     response = None
 
-    while response == None:
+    while response is None:
        status, response = request.next_chunk()
        if status:
            print("Uploaded %d%%." % int(status.progress() * 100))
