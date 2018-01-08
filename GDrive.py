@@ -1,6 +1,7 @@
 from __future__ import print_function
 import httplib2
 import os
+import pprint
 
 
 from oauth2client import client
@@ -45,15 +46,17 @@ def get_credentials():
         print('Storing credentials to ' + credential_path)
     return credentials
 
+def get_drive_service():
+    credentials = get_credentials()
+    http = credentials.authorize(httplib2.Http())
+    return discovery.build("drive", "v3", http=http)
 
 def find_file(file_name, parents=None):
     # Todo: No Parent found error handling
     # Todo: No file found error handling
     # Todo: Handle more than one parent of the same name (maybe two folder same name)
     # Create Google Drive Thing
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    drive_servce = discovery.build("drive", "v3", http=http)
+    drive_service = get_drive_service()
 
     query_str = ""
     # Build query string
@@ -72,7 +75,7 @@ def find_file(file_name, parents=None):
         return 0
 
 
-    result = drive_servce.files().list(
+    result = drive_service.files().list(
         pageSize=10,
         fields="nextPageToken, files(id, name)",
         q="{}".format(query_str)
@@ -86,9 +89,8 @@ def find_file(file_name, parents=None):
         return items
 
 def add_folder(folder_name):
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    drive_service = discovery.build("drive", "v3", http=http)
+
+    drive_service = get_drive_service()
 
     folder_meta = {
         'name': folder_name,
@@ -102,9 +104,7 @@ def add_folder(folder_name):
 def add_file(local_path, remote_folder="root"):
     ''' This function adds file from local_path to a "remote_folder" in the Google Drive'''
     # Initialize drive_service
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    drive_service = discovery.build("drive", "v3", http=http)
+    drive_service = get_drive_service()
     # Create media payload
     media = MediaFileUpload(local_path, 'image/jpg', resumable=True)
 
@@ -136,3 +136,15 @@ def add_file(local_path, remote_folder="root"):
     print("Upload Complete!")
 
 
+def remove_file(fileName, parentName=None):
+    ''' This function deletes a file from the google drive. It does so by finding the folder name and use it'''
+
+    drive_service = get_drive_service()
+    file_id = find_file(fileName, parentName)[0]["id"]
+    print("Removing file {} with id {}...".format(fileName, file_id))
+    drive_service.files().delete(fileId=file_id).execute()
+
+def list_file():
+    drive_service = get_drive_service()
+    results = drive_service.files().list().execute()
+    pprint.pprint(results.get('files', []))
