@@ -2,6 +2,7 @@ from __future__ import print_function
 import httplib2
 import os
 import pprint
+import sys
 
 
 from oauth2client import client
@@ -17,6 +18,16 @@ CLIENT_SECRET_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "
 SCOPES = "https://www.googleapis.com/auth/drive.file"
 # Application Name
 APPLICATION_NAME = "DRIVE API FOR PI SECURITY IMAGES"
+
+class google_query:
+    field = ""
+    operator = ""
+    value = ""
+    def __init__(self, field, operator, value):
+        self.field =field
+        self.operator = operator
+        self.value = value
+
 
 try:
     import argparse
@@ -51,15 +62,23 @@ def get_drive_service():
     http = credentials.authorize(httplib2.Http())
     return discovery.build("drive", "v3", http=http)
 
-def find_file(file_name, parents=None):
+def find_file(file_name, parents=None, before_date=None, after_date=None):
     # Todo: No Parent found error handling
     # Todo: No file found error handling
     # Todo: Handle more than one parent of the same name (maybe two folder same name)
     # Create Google Drive Thing
     drive_service = get_drive_service()
+    query_list = []
 
-    query_str = ""
     # Build query string
+    query_list.append(google_query("name", "=", file_name))
+
+    if before_date is not None:
+        query_list.append(google_query("modifiedTime", "<=", before_date))
+
+    if after_date is not None:
+        query_list.append(google_query("modifiedTime", ">=", after_date))
+
     try:
         if parents is not None:
             # Find parent's id
@@ -67,18 +86,22 @@ def find_file(file_name, parents=None):
                 parent_id = 'root'
             else:
                 parent_id = find_file(parents)[0]["id"]
-            query_str += "'{}' in parents and name='{}'".format(parent_id, file_name)
-        else:
-            query_str += "name='{}'".format(file_name)
+            query_list.append(google_query("parents", "in", parent_id))
     except TypeError:
         print("No parent \"{}\" found".format(parents))
         return 0
 
+    # Join the queries
+    s = " and "
+    query_str = s.join(["{} {} '{}'".format(x.field, x.operator, x.value) for x in query_list])
+    print(query_str)
+        # query_str.j
+        # query_list += "and {} {} {}".format(each.field, each.operator, each.value)
 
     result = drive_service.files().list(
         pageSize=10,
         fields="nextPageToken, files(id, name)",
-        q="{}".format(query_str)
+        q=query_str
     ).execute()
 
     items = result.get('files', [])
