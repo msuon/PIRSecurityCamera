@@ -59,6 +59,7 @@ class SecurityCamera:
         sleep(2)
         print "Taking Picture..."
         c.capture(file_path)
+        c.close()
         return file_path
 
     def save(self):
