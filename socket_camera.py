@@ -6,6 +6,7 @@ import socket
 import logging
 import datetime
 import picamera
+import subprocess
 from threading import Thread
 
 TCP_IP = "localhost"
@@ -41,9 +42,7 @@ def capture():
     file_name = "PiImage_{}.jpg".format(datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S"))
     file_path = os.path.join(config["data_save_dir"], file_name)
 
-    logging.info("Taking Picture...")
     camera_module.capture(file_path)
-    logging.info("Captured picture in {}".format(file_path))
     return file_path
 
 def start_camera():
@@ -62,6 +61,17 @@ if __name__ == "__main__":
     # Initialize Logging
     log_path = "/home/msuon/projects/security-camera-v2/logs/socket_camera.log"
     logging.basicConfig(filename=log_path, level=logging.DEBUG, format='[%(asctime)s]%(levelname)s: %(message)s')
+
+    # Check if instance of program is already running
+    pid = str(os.getpid())
+    pidfile = "/tmp/SocketCamera.pid"
+
+    logging.info("Checking if process already running")
+    if os.path.isfile(pidfile):
+        logging.info("Program already running exiting this process...")
+        sys.exit()
+    with open(pidfile, "w") as f:
+        f.write(pid)
 
     try:
         logging.info("Loading config...")
@@ -95,6 +105,11 @@ if __name__ == "__main__":
             t.join()
     except IOError:
         logging.error("No config file found...")
+
     except:
         e = sys.exc_info()[0]
         logging.error(e)
+
+    finally:
+        subprocess.call(["rm {}".format(pidfile)], shell=True)
+        logging.warning("Exiting program...")
