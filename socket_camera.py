@@ -58,8 +58,11 @@ def start_camera():
 
 
 if __name__ == "__main__":
+
     # Initialize Logging
     log_path = "/home/msuon/projects/security-camera-v2/logs/socket_camera.log"
+    if not os.path.isdir(os.path.dirname(log_path)):
+        os.mkdir(os.path.dirname(log_path))
     logging.basicConfig(filename=log_path, level=logging.DEBUG, format='[%(asctime)s]%(levelname)s: %(message)s')
 
     # Check if instance of program is already running
